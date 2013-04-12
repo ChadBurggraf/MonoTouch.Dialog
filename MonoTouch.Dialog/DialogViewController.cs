@@ -279,6 +279,7 @@ namespace MonoTouch.Dialog
 			public override void CancelButtonClicked (UISearchBar searchBar)
 			{
 				searchBar.ShowsCancelButton = false;
+				container.searchBar.Text = "";
 				container.FinishSearch ();
 				searchBar.ResignFirstResponder ();
 			}
@@ -583,6 +584,17 @@ namespace MonoTouch.Dialog
 			}
 		}
 
+		public bool Pushing {
+			get {
+				return pushing;
+			}
+			set {
+				pushing = value;
+				if (NavigationItem != null)
+					NavigationItem.HidesBackButton = !pushing;
+			}
+		}
+		
 		public virtual Source CreateSizingSource (bool unevenRows)
 		{
 			return unevenRows ? new SizingSource (this) : new Source (this);
@@ -667,6 +679,10 @@ namespace MonoTouch.Dialog
 			Style = style;
 			this.pushing = pushing;
 			this.root = root;
+		}
+		public DialogViewController (IntPtr handle) : base(handle)
+		{
+			this.root = new RootElement ("");
 		}
 	}
 }
