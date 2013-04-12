@@ -576,19 +576,20 @@ namespace MonoTouch.Dialog
 		// in use, as it could be a bit of a pig, and we do not want to
 		// wait for the GC to kick-in.
 		class WebViewController : UIViewController {
-			HtmlElement container;
 			
-			public WebViewController (HtmlElement container) : base ()
+			public WebViewController(HtmlElement container) : base ()
 			{
-				this.container = container;
+				this.Container = container;
 			}
 			
 			public bool Autorotate { get; set; }
-			
-			public override bool ShouldAutorotateToInterfaceOrientation (UIInterfaceOrientation toInterfaceOrientation)
-			{
-				return Autorotate;
-			}
+
+            public HtmlElement Container { get; private set; }
+
+            public override bool ShouldAutorotate()
+            {
+                return this.Autorotate;
+            }
 		}
 		
 		public override void Selected (DialogViewController dvc, UITableView tableView, NSIndexPath path)
@@ -1271,7 +1272,7 @@ namespace MonoTouch.Dialog
 		{
 			Value = image;
 			scaled = Scale (image);
-			currentController.DismissModalViewControllerAnimated (true);
+			currentController.DismissViewController(true, null);
 			
 		}
 		
@@ -1524,6 +1525,21 @@ namespace MonoTouch.Dialog
 
 		static readonly NSString passwordKey = new NSString ("EntryElement+Password");
 		static readonly NSString cellkey = new NSString ("EntryElement");
+
+        UITableViewCell cell;
+        protected virtual UITableViewCell Cell
+        {
+            get
+            {
+                if (cell == null)
+                {
+                    cell = new UITableViewCell (UITableViewCellStyle.Default, CellKey);
+                    cell.SelectionStyle = UITableViewCellSelectionStyle.None;
+                }
+
+                return cell;
+            }
+        }
 		
 		protected override NSString CellKey {
 			get {
@@ -1531,24 +1547,29 @@ namespace MonoTouch.Dialog
 			}
 		}
 
-		UITableViewCell cell;
+        protected virtual int CellHorizontalMarginsPad
+        {
+            get { return 45; }
+        }
+
+        protected virtual int CellHorizontalMarginsPhone
+        {
+            get { return 10; }
+        }
+
 		public override UITableViewCell GetCell (UITableView tv)
 		{
-			if (cell == null) {
-				cell = new UITableViewCell (UITableViewCellStyle.Default, CellKey);
-				cell.SelectionStyle = UITableViewCellSelectionStyle.None;
-
-			} 
+            UITableViewCell cell = this.Cell;
 			cell.TextLabel.Text = Caption;
 
-			var offset = (UIDevice.CurrentDevice.UserInterfaceIdiom == UIUserInterfaceIdiom.Phone) ? 20 : 90;
+			var offset = 2 * (UIDevice.CurrentDevice.UserInterfaceIdiom == UIUserInterfaceIdiom.Phone ? this.CellHorizontalMarginsPhone : this.CellHorizontalMarginsPad);
 			cell.Frame = new RectangleF(cell.Frame.X, cell.Frame.Y, tv.Frame.Width-offset, cell.Frame.Height);
 			SizeF size = ComputeEntryPosition (tv, cell);
 			float yOffset = (cell.ContentView.Bounds.Height - size.Height) / 2 - 1;
 			float width = cell.ContentView.Bounds.Width - size.Width;
 			if (textalignment == UITextAlignment.Right) {
 				// Add padding if right aligned
-				width -= 10;
+                width -= UIDevice.CurrentDevice.UserInterfaceIdiom == UIUserInterfaceIdiom.Phone ? this.CellHorizontalMarginsPhone : this.CellHorizontalMarginsPad;
 			}
 			var entryFrame = new RectangleF (size.Width, yOffset, width, size.Height);
 
@@ -1811,13 +1832,12 @@ namespace MonoTouch.Dialog
 				base.DidRotate (fromInterfaceOrientation);
 				container.datePicker.Frame = PickerFrameWithSize (container.datePicker.SizeThatFits (SizeF.Empty));
 			}
-			
 			public bool Autorotate { get; set; }
 			
-			public override bool ShouldAutorotateToInterfaceOrientation (UIInterfaceOrientation toInterfaceOrientation)
-			{
-				return Autorotate;
-			}
+            public override bool ShouldAutorotate()
+            {
+                return this.Autorotate;
+            }
 		}
 		
 		public override void Selected (DialogViewController dvc, UITableView tableView, NSIndexPath path)

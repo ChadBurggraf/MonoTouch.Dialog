@@ -152,11 +152,11 @@ namespace MonoTouch.Dialog
 		/// Controls whether the DialogViewController should auto rotate
 		/// </summary>
 		public bool Autorotate { get; set; }
-		
-		public override bool ShouldAutorotateToInterfaceOrientation (UIInterfaceOrientation toInterfaceOrientation)
-		{
-			return Autorotate || toInterfaceOrientation == UIInterfaceOrientation.Portrait;
-		}
+
+        public override bool ShouldAutorotate()
+        {
+            return this.Autorotate;
+        }
 		
 		public override void DidRotate (UIInterfaceOrientation fromInterfaceOrientation)
 		{
@@ -470,7 +470,7 @@ namespace MonoTouch.Dialog
 			if (nav != null && !(controller is UINavigationController))
 				nav.PushViewController (controller, true);
 			else
-				PresentModalViewController (controller, true);
+                this.PresentViewController(controller, true, null);
 		}
 
 		/// <summary>
@@ -485,7 +485,7 @@ namespace MonoTouch.Dialog
 			if (nav != null)
 				nav.PopViewControllerAnimated (animated);
 			else
-				DismissModalViewControllerAnimated (animated);
+				this.DismissViewController(animated, null);
 		}
 
 		void SetupSearch ()
