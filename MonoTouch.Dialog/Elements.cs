@@ -1346,7 +1346,25 @@ namespace MonoTouch.Dialog
 				return entryKey;
 			}
 		}
-
+        
+        public bool IsPassword
+        {
+            get
+            {
+                return this.isPassword;
+            }
+            
+            set
+            {
+                this.isPassword = value;
+                
+                if (this.entry != null)
+                {
+                    this.entry.SecureTextEntry = value;
+                }
+            }
+        }
+        
 		/// <summary>
 		/// The type of keyboard used for input, you can change
 		/// this to use this for numeric input, email addressed,
@@ -1363,6 +1381,24 @@ namespace MonoTouch.Dialog
 			}
 		}
 		
+        public string Placeholder
+        {
+            get
+            {
+                return this.placeholder ?? string.Empty;
+            }
+            
+            set
+            {
+                this.placeholder = value;
+                
+                if (this.entry != null)
+                {
+                    this.entry.Placeholder = value ?? string.Empty;
+                }
+            }
+        }
+
 		/// <summary>
 		/// The type of Return Key that is displayed on the
 		/// keyboard, you can change this to use this for
@@ -1452,8 +1488,8 @@ namespace MonoTouch.Dialog
 		/// </param>
 		public EntryElement (string caption, string placeholder, string value) : base (caption)
 		{ 
-			Value = value;
-			this.placeholder = placeholder;
+			this.Value = value;
+			this.Placeholder = placeholder;
 		}
 		
 		/// <summary>
@@ -1473,9 +1509,9 @@ namespace MonoTouch.Dialog
 		/// </param>
 		public EntryElement (string caption, string placeholder, string value, bool isPassword) : base (caption)
 		{
-			Value = value;
-			this.isPassword = isPassword;
-			this.placeholder = placeholder;
+			this.Value = value;
+			this.IsPassword = isPassword;
+			this.Placeholder = placeholder;
 		}
 
 		public override string Summary ()
