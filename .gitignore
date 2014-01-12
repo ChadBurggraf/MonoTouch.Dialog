@@ -1,5 +1,8 @@
+[Bb]in/
+[Oo]bj/
 *~
 *.userprefs
 *.pidb
-
+*.csproj.user
 .DS_Store
+
