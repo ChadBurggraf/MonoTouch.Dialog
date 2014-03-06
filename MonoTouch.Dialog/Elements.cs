@@ -454,6 +454,10 @@ namespace MonoTouch.Dialog
 		static NSString skey = new NSString ("FloatElement");
 		//UIImage Left, Right;
 		UISlider slider;
+
+		public FloatElement (float value) : this (null, null, value)
+		{
+		}
 		
 		public FloatElement (UIImage left, UIImage right, float value) : base (null)
 		{
@@ -484,15 +488,15 @@ namespace MonoTouch.Dialog
 				captionSize = cell.TextLabel.StringSize (Caption, UIFont.FromName (cell.TextLabel.Font.Name, UIFont.LabelFontSize));
 				captionSize.Width += 10; // Spacing
 			}
-
 			if (slider == null){
-				slider = new UISlider (new RectangleF (10f + captionSize.Width, 12f, 280f - captionSize.Width, 7f)){
+				slider = new UISlider (new RectangleF (10f + captionSize.Width, UIDevice.CurrentDevice.CheckSystemVersion (7, 0) ? 18f : 12f, cell.ContentView.Bounds.Width - 20 - captionSize.Width, 7f)) {
 					BackgroundColor = UIColor.Clear,
 					MinValue = this.MinValue,
 					MaxValue = this.MaxValue,
 					Continuous = true,
 					Value = this.Value,
-					Tag = 1
+					Tag = 1,
+					AutoresizingMask = UIViewAutoresizing.FlexibleWidth
 				};
 				slider.ValueChanged += delegate {
 					Value = slider.Value;
@@ -576,20 +580,19 @@ namespace MonoTouch.Dialog
 		// in use, as it could be a bit of a pig, and we do not want to
 		// wait for the GC to kick-in.
 		class WebViewController : UIViewController {
+			HtmlElement container;
 			
-			public WebViewController(HtmlElement container) : base ()
+			public WebViewController (HtmlElement container) : base ()
 			{
-				this.Container = container;
+				this.container = container;
 			}
 			
 			public bool Autorotate { get; set; }
-
-            public HtmlElement Container { get; private set; }
-
-            public override bool ShouldAutorotate()
-            {
-                return this.Autorotate;
-            }
+			
+			public override bool ShouldAutorotateToInterfaceOrientation (UIInterfaceOrientation toInterfaceOrientation)
+			{
+				return Autorotate;
+			}
 		}
 		
 		public override void Selected (DialogViewController dvc, UITableView tableView, NSIndexPath path)
@@ -860,7 +863,7 @@ namespace MonoTouch.Dialog
 	
 		void ClearBackground (UITableViewCell cell)
 		{
-			cell.BackgroundColor = UIColor.White;
+			cell.BackgroundColor = UITableViewCell.Appearance.BackgroundColor;
 			cell.TextLabel.BackgroundColor = UIColor.Clear;
 		}
 
@@ -916,7 +919,7 @@ namespace MonoTouch.Dialog
 			
 			if (this.Accessory != UITableViewCellAccessory.None)
 				maxSize.Width -= 20;
-			
+
 			string c = Caption;
 			string v = Value;
 			// ensure the (multi-line) Value will be rendered inside the cell when no Caption is present
@@ -1272,7 +1275,7 @@ namespace MonoTouch.Dialog
 		{
 			Value = image;
 			scaled = Scale (image);
-			currentController.DismissViewController(true, null);
+			currentController.DismissModalViewControllerAnimated (true);
 			
 		}
 		
@@ -1571,6 +1574,7 @@ namespace MonoTouch.Dialog
                 {
                     cell = new UITableViewCell (UITableViewCellStyle.Default, CellKey);
                     cell.SelectionStyle = UITableViewCellSelectionStyle.None;
+                    cell.TextLabel.Font = font;
                 }
 
                 return cell;
@@ -1764,13 +1768,14 @@ namespace MonoTouch.Dialog
 	public class DateTimeElement : StringElement {
 		public DateTime DateValue;
 		public UIDatePicker datePicker;
+		public int MinuteInterval = 1;
 		public event Action<DateTimeElement> DateSelected;
-		public UIColor BackgroundColor = UIColor.Black;
+		public UIColor BackgroundColor = (UIDevice.CurrentDevice.CheckSystemVersion (7, 0)) ? UIColor.White : UIColor.Black;
 		
 		protected internal NSDateFormatter fmt = new NSDateFormatter () {
 			DateStyle = NSDateFormatterStyle.Short
 		};
-		
+
 		public DateTimeElement (string caption, DateTime date) : base (caption)
 		{
 			DateValue = date;
@@ -1820,7 +1825,8 @@ namespace MonoTouch.Dialog
 			var picker = new UIDatePicker (RectangleF.Empty){
 				AutoresizingMask = UIViewAutoresizing.FlexibleWidth,
 				Mode = UIDatePickerMode.DateAndTime,
-				Date = DateValue
+				Date = DateValue,
+				MinuteInterval = MinuteInterval
 			};
 			return picker;
 		}
@@ -1868,12 +1874,13 @@ namespace MonoTouch.Dialog
 				base.DidRotate (fromInterfaceOrientation);
 				container.datePicker.Frame = PickerFrameWithSize (container.datePicker.SizeThatFits (SizeF.Empty));
 			}
+			
 			public bool Autorotate { get; set; }
 			
-            public override bool ShouldAutorotate()
-            {
-                return this.Autorotate;
-            }
+			public override bool ShouldAutorotateToInterfaceOrientation (UIInterfaceOrientation toInterfaceOrientation)
+			{
+				return Autorotate;
+			}
 		}
 		
 		public override void Selected (DialogViewController dvc, UITableView tableView, NSIndexPath path)
@@ -1924,6 +1931,7 @@ namespace MonoTouch.Dialog
 		{
 			var picker = base.CreatePicker ();
 			picker.Mode = UIDatePickerMode.Time;
+			picker.MinuteInterval = MinuteInterval;
 			return picker;
 		}
 	}
@@ -1938,15 +1946,46 @@ namespace MonoTouch.Dialog
 	/// </remarks>
 	public class UIViewElement : Element, IElementSizing {
 		static int count;
+		public UIView ContainerView;
 		NSString key;
 		protected UIView View;
 		public CellFlags Flags;
-		
+		UIEdgeInsets insets;
+
+		public UIEdgeInsets Insets { 
+			get {
+				return insets;
+			}
+			set {
+				var viewFrame = View.Frame;
+				var dx = value.Left - insets.Left;
+				var dy = value.Top - insets.Top;
+				var ow = insets.Left + insets.Right;
+				var oh = insets.Top + insets.Bottom;
+				var w = value.Left + value.Right;
+				var h = value.Top + value.Bottom;
+
+				ContainerView.Frame = new RectangleF (0, 0, ContainerView.Frame.Width + w - ow, ContainerView.Frame.Height + h -oh);
+				viewFrame.X += dx;
+				viewFrame.Y += dy;
+				View.Frame = viewFrame;
+
+				insets = value;
+
+				// Height changed, notify UITableView
+				if (dy != 0 || h != oh)
+					GetContainerTableView ().ReloadData ();
+				
+			}
+		}
+
+		[Flags]
 		public enum CellFlags {
 			Transparent = 1,
 			DisableSelection = 2
 		}
-		
+
+
 		/// <summary>
 		///   Constructor
 		/// </summary>
@@ -1960,13 +1999,31 @@ namespace MonoTouch.Dialog
 		/// If this is set, then the view is responsible for painting the entire area,
 		/// otherwise the default cell paint code will be used.
 		/// </param>
-		public UIViewElement (string caption, UIView view, bool transparent) : base (caption) 
+		public UIViewElement (string caption, UIView view, bool transparent, UIEdgeInsets insets) : base (caption) 
 		{
+			this.insets = insets;
+			var oframe = view.Frame;
+			var frame = oframe;
+			frame.Width += insets.Left + insets.Right;
+			frame.Height += insets.Top + insets.Bottom;
+
+			ContainerView = new UIView (frame);
+			if ((Flags & CellFlags.Transparent) != 0)
+				ContainerView.BackgroundColor = UIColor.Clear;
+
+			if (insets.Left != 0 || insets.Top != 0)
+				view.Frame = new RectangleF (insets.Left + frame.X, insets.Top + frame.Y, frame.Width, frame.Height);
+
+			ContainerView.AddSubview (view);
 			this.View = view;
 			this.Flags = transparent ? CellFlags.Transparent : 0;
 			key = new NSString ("UIViewElement" + count++);
 		}
 		
+		public UIViewElement (string caption, UIView view, bool transparent) : this (caption, view, transparent, UIEdgeInsets.Zero)
+		{
+		}
+
 		protected override NSString CellKey {
 			get {
 				return key;
@@ -1993,14 +2050,14 @@ namespace MonoTouch.Dialog
 
 				if (Caption != null)
 					cell.TextLabel.Text = Caption;
-				cell.ContentView.AddSubview (View);
+				cell.ContentView.AddSubview (ContainerView);
 			} 
 			return cell;
 		}
 		
 		public float GetHeight (UITableView tableView, NSIndexPath indexPath)
 		{
-			return View.Bounds.Height;
+			return ContainerView.Bounds.Height+1;
 		}
 		
 		protected override void Dispose (bool disposing)
@@ -2257,6 +2314,23 @@ namespace MonoTouch.Dialog
 			return count;
 		}
 		
+		/// <summary>
+		/// Inserts a single RootElement into the Section using the specified animation
+		/// </summary>
+		/// <param name="idx">
+		/// The index where the elements are inserted
+		/// </param>
+		/// <param name="anim">
+		/// The animation to use
+		/// </param>
+		/// <param name="newElements">
+		/// A series of elements.
+		/// </param>
+		public void Insert (int idx, UITableViewRowAnimation anim, RootElement newElement)
+		{
+			Insert (idx, anim, (Element) newElement);
+		}
+
 		void InsertVisual (int idx, UITableViewRowAnimation anim, int count)
 		{
 			var root = Parent as RootElement;
