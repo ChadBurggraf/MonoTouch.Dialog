@@ -2057,7 +2057,7 @@ namespace MonoTouch.Dialog
 		
 		public float GetHeight (UITableView tableView, NSIndexPath indexPath)
 		{
-			return ContainerView.Bounds.Height+1;
+			return ContainerView.Bounds.Height;
 		}
 		
 		protected override void Dispose (bool disposing)
